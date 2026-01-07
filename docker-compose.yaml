@@ -15,7 +15,7 @@ services:
         condition: service_started # Wait for php-fpm to start
 
   app:
-    image: ghcr.io/marciifee/CosplayGIF-App:main
+    image: ghcr.io/marciifee/cosplaygif-app:main
     restart: unless-stopped
     env_file:
       - .env
@@ -34,7 +34,7 @@ services:
       #  condition: service_started
 
   queue:
-    image: ghcr.io/marciifee/CosplayGIF-App:main
+    image: ghcr.io/marciifee/cosplaygif-app:main
     restart: unless-stopped
     command: php artisan queue:work
     env_file:
@@ -49,7 +49,7 @@ services:
       - memcached
 
   scheduler:
-    image: ghcr.io/marciifee/CosplayGIF-App:main
+    image: ghcr.io/marciifee/cosplaygif-app:main
     restart: unless-stopped
     command: php artisan schedule:work
     env_file:
