@@ -3,8 +3,8 @@ services:
     image: nginx:latest
     restart: unless-stopped
     volumes:
-      - ./cosplaygif-app/www/:/var/www
-      - ./cosplaygif-app/docker/development/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./home/test/cosplaygif-app/www/:/var/www
+      - ./home/test/cosplaygif-app/docker/development/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "8099:80"
     environment:
@@ -18,7 +18,7 @@ services:
   php-fpm:
     build:
       context: .
-      dockerfile: ./cosplaygif-app/docker/common/php-fpm/Dockerfile
+      dockerfile: ../home/test/cosplaygif-app/docker/common/php-fpm/Dockerfile
       target: development
       args:
         UID: ${UID:-1000}
@@ -34,7 +34,7 @@ services:
       - .env
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      - ./cosplaygif-app/www/:/var/www
+      - ./home/test/cosplaygif-app/www/:/var/www
     networks:
       - laravel-development
     depends_on:
@@ -51,7 +51,7 @@ services:
     # For the workspace service, we will also create a custom image to install and setup all the necessary stuff.
     build:
       context: .
-      dockerfile: ./cosplaygif-app/docker/development/workspace/Dockerfile
+      dockerfile: ../home/test/cosplaygif-app/docker/development/workspace/Dockerfile
       args:
         UID: ${UID:-1000}
         GID: ${GID:-1000}
@@ -66,7 +66,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./cosplaygif-app1/www/:/var/www
+      - ./home/test/cosplaygif-app1/www/:/var/www
     networks:
       - laravel-development
     depends_on:
