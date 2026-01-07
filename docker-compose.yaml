@@ -1,10 +1,9 @@
 services:
-  web:
-    image: nginx:latest
+  nginx:
+    image: nginx:alpine
     restart: unless-stopped
     volumes:
-      - ../home/test/cosplaygif-app/www/:/var/www
-      - ../home/test/cosplaygif-app/docker/development/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
     ports:
       - "8099:80"
     environment:
@@ -15,26 +14,13 @@ services:
       php-fpm:
         condition: service_started # Wait for php-fpm to start
 
-  php-fpm:
-    build:
-      context: .
-      dockerfile: ../home/test/cosplaygif-app/docker/common/php-fpm/Dockerfile
-      target: development
-      args:
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
-        XDEBUG_ENABLED: ${XDEBUG_ENABLED:-true}
-        XDEBUG_MODE: develop,coverage,debug,profile
-        XDEBUG_HOST: ${XDEBUG_HOST:-host.docker.internal}
-        XDEBUG_IDE_KEY: ${XDEBUG_IDE_KEY:-DOCKER}
-        XDEBUG_LOG: /dev/stdout
-        XDEBUG_LOG_LEVEL: 0
+  app:
+    image: ghcr.io/marciifee/cosplaygif-app:main
+    restart: unless-stopped
     env_file:
-      # Load the environment variables from the Laravel application
       - .env
-    user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      - ../home/test/cosplaygif-app/www/:/var/www
+      - app_storage:/var/www/storage
     networks:
       - laravel-development
     depends_on:
@@ -47,32 +33,35 @@ services:
       #postgres:
       #  condition: service_started
 
-  workspace:
-    # For the workspace service, we will also create a custom image to install and setup all the necessary stuff.
-    build:
-      context: .
-      dockerfile: ../home/test/cosplaygif-app/docker/development/workspace/Dockerfile
-      args:
-        UID: ${UID:-1000}
-        GID: ${GID:-1000}
-        XDEBUG_ENABLED: ${XDEBUG_ENABLED:-true}
-        XDEBUG_MODE: develop,coverage,debug,profile
-        XDEBUG_HOST: ${XDEBUG_HOST:-host.docker.internal}
-        XDEBUG_IDE_KEY: ${XDEBUG_IDE_KEY:-DOCKER}
-        XDEBUG_LOG: /dev/stdout
-        XDEBUG_LOG_LEVEL: 0
-    tty: true # Enables an interactive terminal
-    stdin_open: true # Keeps standard input open for 'docker exec'
+  queue:
+    image: ghcr.io/marciifee/cosplaygif-app:main
+    restart: unless-stopped
+    command: php artisan queue:work
     env_file:
       - .env
     volumes:
-      - ../home/test/cosplaygif-app1/www/:/var/www
+      - app_storage:/var/www/storage
     networks:
       - laravel-development
     depends_on:
       - mariadb
       - redis
       - memcached
+
+  scheduler:
+    image: ghcr.io/marciifee/cosplaygif-app:main
+    restart: unless-stopped
+    command: php artisan schedule:work
+    env_file:
+      - .env
+    volumes:
+      - app_storage:/var/www/storage
+    depends_on:
+      - mariadb
+      - redis
+      - memcached
+    networks:
+      - laravel-development
 
   #postgres:
   #  image: postgres:18
@@ -136,3 +125,4 @@ networks:
 volumes:
   #postgres-data-development:
   mariadb-data-development:
+  app_storage:
