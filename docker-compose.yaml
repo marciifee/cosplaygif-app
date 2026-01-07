@@ -3,8 +3,8 @@ services:
     image: nginx:latest
     restart: unless-stopped
     volumes:
-      - ./home/test/cosplaygif-app/www/:/var/www
-      - ./home/test/cosplaygif-app/docker/development/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../home/test/cosplaygif-app/www/:/var/www
+      - ../home/test/cosplaygif-app/docker/development/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     ports:
       - "8099:80"
     environment:
@@ -34,7 +34,7 @@ services:
       - .env
     user: "${UID:-1000}:${GID:-1000}"
     volumes:
-      - ./home/test/cosplaygif-app/www/:/var/www
+      - ../home/test/cosplaygif-app/www/:/var/www
     networks:
       - laravel-development
     depends_on:
@@ -66,7 +66,7 @@ services:
     env_file:
       - .env
     volumes:
-      - ./home/test/cosplaygif-app1/www/:/var/www
+      - ../home/test/cosplaygif-app1/www/:/var/www
     networks:
       - laravel-development
     depends_on:
