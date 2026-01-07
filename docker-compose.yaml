@@ -11,7 +11,7 @@ services:
     networks:
       - laravel-development
     depends_on:
-      php-fpm:
+      app:
         condition: service_started # Wait for php-fpm to start
 
   app:
