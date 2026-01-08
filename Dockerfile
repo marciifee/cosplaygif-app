@@ -1,21 +1,14 @@
 FROM php:8.3-fpm-alpine
 
-# System dependencies
+# System deps
 RUN apk add --no-cache \
+    bash \
+    git \
+    unzip \
     icu-dev \
     oniguruma-dev \
     libzip-dev \
-    zlib-dev \
-    git \
-    unzip \
- && docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    intl \
-    mbstring \
-    zip \
- && docker-php-ext-enable opcache
-
+    zlib-dev
 
 # PHP extensions
 RUN docker-php-ext-install \
@@ -23,22 +16,27 @@ RUN docker-php-ext-install \
     pdo_mysql \
     intl \
     mbstring \
-    zip \
-    opcache
+    zip
 
 WORKDIR /var/www
 
 # Composer
 COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Copy application
+# Copy app
 COPY . .
 
-# Install dependencies
-RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader
+# IMPORTANT: no scripts during build
+RUN composer install \
+    --no-dev \
+    --prefer-dist \
+    --no-interaction \
+    --optimize-autoloader \
+    --no-scripts
 
 # Permissions
-RUN chown -R www-data:www-data storage bootstrap/cache
+RUN mkdir -p storage bootstrap/cache \
+ && chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 9000
 CMD ["php-fpm"]
