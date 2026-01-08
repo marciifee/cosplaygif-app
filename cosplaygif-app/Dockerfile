@@ -56,13 +56,15 @@ WORKDIR /var/www/html
 COPY composer.json composer.lock ./
 
 # Composer läuft jetzt mit allen benötigten Extensions
-RUN composer install \
-    --no-interaction \
-    --prefer-dist \
-    --optimize-autoloader \
-    --no-dev \
-    --no-scripts \
-    -vvv
+RUN set -eux; \
+    composer install \
+      --no-interaction \
+      --prefer-dist \
+      --optimize-autoloader \
+      --no-dev \
+      --no-scripts \
+      -vvv \
+    || { echo "----- COMPOSER FAILED -----"; composer diagnose; exit 1; }
 
 COPY . .
 
