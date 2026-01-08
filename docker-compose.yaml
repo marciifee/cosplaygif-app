@@ -17,10 +17,6 @@ services:
       app:
         condition: service_started # Wait for php-fpm to start
 
-configs:
-  nginx_default:
-    file: ./nginx.conf
-
   app:
     #image: ghcr.io/marciifee/cosplaygif-app:main
     build:
@@ -97,13 +93,16 @@ configs:
     restart: unless-stopped
     ports:
       - "${DB_PORT_FORWARD:-3336}:3306"
+    configs:
+      - source: mariadb_init
+        target: /docker-entrypoint-initdb.d/init.sql
     environment:
       MARIADB_DATABASE: ${DB_DATABASE:-app}
       MARIADB_USER: ${DB_USERNAME:-laravel}
       MARIADB_PASSWORD: ${DB_PASSWORD:-Winforme25}
       MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
     volumes:
-      - mariadb-data-development:/var/lib/mysql
+      - mariadb-data:/var/lib/mysql
     networks:
       - laravel-development
     healthcheck:
@@ -140,5 +139,12 @@ networks:
 
 volumes:
   #postgres-data-development:
-  mariadb-data-development:
+  mariadb-data:
   app_storage:
+
+configs:
+  mariadb_init:
+    file: ./docker/mariadb/init.sql
+    
+  nginx_default:
+    file: ./nginx.conf
