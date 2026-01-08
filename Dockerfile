@@ -2,13 +2,20 @@ FROM php:8.3-fpm-alpine
 
 # System dependencies
 RUN apk add --no-cache \
-    bash \
     icu-dev \
     oniguruma-dev \
     libzip-dev \
     zlib-dev \
     git \
-    unzip
+    unzip \
+ && docker-php-ext-install \
+    pdo \
+    pdo_mysql \
+    intl \
+    mbstring \
+    zip \
+ && docker-php-ext-enable opcache
+
 
 # PHP extensions
 RUN docker-php-ext-install \
