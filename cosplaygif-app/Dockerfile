@@ -1,25 +1,28 @@
 FROM php:8.3-fpm
 
-# Update package list and install dependencies
+# ------------------------------------------------------------
+# System dependencies
+# ------------------------------------------------------------
 RUN apt-get update && apt-get install -y \
     build-essential \
+    git \
+    unzip \
+    curl \
     libpng-dev \
     libjpeg62-turbo-dev \
     libwebp-dev \
-    libxpm-dev \
     libfreetype6-dev \
     libzip-dev \
     libicu-dev \
     libonig-dev \
     libpq-dev \
-    zip \
-    unzip \
-    git \
-    bash \
-    curl \
+    libxml2-dev \
+    libsodium-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# PHP extensions
+# ------------------------------------------------------------
+# PHP extensions required by Laravel
+# ------------------------------------------------------------
 RUN docker-php-ext-configure gd \
         --with-freetype \
         --with-jpeg \
@@ -34,33 +37,41 @@ RUN docker-php-ext-configure gd \
         exif \
         pcntl \
         bcmath \
-        opcache
+        opcache \
+        ctype \
+        tokenizer \
+        curl \
+        sodium
+
+# ------------------------------------------------------------
+# Composer
+# ------------------------------------------------------------
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Install Composer
 #COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
 
-# Install Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
-
-# Application directory
+# ------------------------------------------------------------
+# Application
+# ------------------------------------------------------------
 WORKDIR /var/www/html
 
-# Composer-Dateien zuerst (wichtig für Cache & Stabilität)
 COPY composer.json composer.lock ./
 
-# PHP Dependencies installieren
+# Composer läuft jetzt mit allen benötigten Extensions
 RUN composer install \
     --no-interaction \
     --prefer-dist \
     --optimize-autoloader \
     --no-dev
 
-# Copy the rest of the Laravel application
 COPY . .
 
+# ------------------------------------------------------------
 # Permissions
+# ------------------------------------------------------------
 RUN chown -R www-data:www-data /var/www/html \
-    && chmod -R 755 /var/www/html/storage /var/www/html/bootstrap/cache
+    && chmod -R 775 storage bootstrap/cache
 
 USER www-data
 
