@@ -28,7 +28,7 @@ RUN docker-php-ext-configure gd \
         fileinfo \
         dom \
         xml \
-        simplexml
+        simplexml \
         gd \
         pdo \
         pdo_mysql \
