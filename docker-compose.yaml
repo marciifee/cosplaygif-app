@@ -93,9 +93,9 @@ services:
     restart: unless-stopped
     ports:
       - "${DB_PORT_FORWARD:-3336}:3306"
-    configs:
-      - source: mariadb_init
-        target: /docker-entrypoint-initdb.d/init.sql
+    #configs:
+    #  - source: mariadb_init
+    #    target: /docker-entrypoint-initdb.d/init.sql
     environment:
       MARIADB_DATABASE: ${DB_DATABASE:-app}
       MARIADB_USER: ${DB_USERNAME:-laravel}
@@ -143,8 +143,8 @@ volumes:
   app_storage:
 
 configs:
-  mariadb_init:
-    file: ./docker/mariadb/init.sql
-    
+  #mariadb_init:
+  #  file: ./docker/mariadb/init.sql
+
   nginx_default:
     file: ./nginx.conf
