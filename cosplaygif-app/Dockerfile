@@ -44,13 +44,13 @@ COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 WORKDIR /var/www/html
 
 # COPY composer files first
-COPY composer.json composer.lock ./
+COPY cosplaygif-app/composer.json cosplaygif-app/composer.lock ./
 
 # INSTALL PHP dependencies (THIS WAS MISSING)
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader
 
-# NOW copy the rest of the application
-COPY . .
+# NOW Copy the rest of the Laravel application
+COPY cosplaygif-app ./
 
 # Permissions
 RUN chown -R www-data:www-data /var/www/html
