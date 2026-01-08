@@ -25,10 +25,6 @@ RUN docker-php-ext-configure gd \
         --with-jpeg \
         --with-webp \
     && docker-php-ext-install -j$(nproc) \
-        fileinfo \
-        dom \
-        xml \
-        simplexml \
         gd \
         pdo \
         pdo_mysql \
