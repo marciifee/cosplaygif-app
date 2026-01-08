@@ -46,25 +46,25 @@ RUN docker-php-ext-configure gd \
 #COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Install Composer
-COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
+#COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
 
 # ------------------------------------------------------------
 # Application
 # ------------------------------------------------------------
 WORKDIR /var/www/html
 
-COPY composer.json composer.lock ./
+#COPY composer.json composer.lock ./
 
 # Composer läuft jetzt mit allen benötigten Extensions
-RUN set -eux; \
-    composer install \
-      --no-interaction \
-      --prefer-dist \
-      --optimize-autoloader \
-      --no-dev \
-      --no-scripts \
-      -vvv \
-    || { echo "----- COMPOSER FAILED -----"; composer diagnose; exit 1; }
+#RUN set -eux; \
+#    composer install \
+#      --no-interaction \
+#      --prefer-dist \
+#      --optimize-autoloader \
+#      --no-dev \
+#      --no-scripts \
+#      -vvv \
+#    || { echo "----- COMPOSER FAILED -----"; composer diagnose; exit 1; }
 
 COPY . .
 
