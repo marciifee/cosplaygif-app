@@ -1,121 +1,177 @@
+# Docker Compose setup for local and production (Traefik) with FrankenPHP
+# - Build a single image and reuse it for web, worker, and scheduler services
+# - For production behind Traefik, set labels and SERVER_NAME appropriately
+
+x-env: &default-env
+  env_file:
+    - .env
+
+x-volumes: &laravel-volumes
+  volumes:
+    - ./.storage/logs/:/app/storage/logs
+    - ./.storage/app/:/app/storage/app
+    - ./.storage/framework/:/app/storage/framework
+# helper map to merge env and volumes in one << per service
+x-common: &common
+  <<: [*default-env, *laravel-volumes]
+
+name: cosplaygif-app_${APP_ENV}
+
 services:
-  nginx:
-    image: nginx:latest
-    restart: unless-stopped
-    #volumes:
-    #  - /home/test/docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    configs:
-      - source: nginx_default
-        target: /etc/nginx/conf.d/default.conf
-    ports:
-      - "8099:80"
-    environment:
-      - NGINX_HOST=localhost
-    networks:
-      - laravel-development
-    depends_on:
-      app:
-        condition: service_started # Wait for php-fpm to start
 
   app:
-    #image: ghcr.io/marciifee/cosplaygif-app:main
+    container_name: cosplaygif-app_web_${APP_ENV}
+    image: cosplaygif_app:frankenphp
+    pull_policy: never
     build:
-      context: ./cosplaygif-app
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file:
-      - stack.env
-    volumes:
-      - app_storage:/var/www/storage
-    networks:
-      - laravel-development
+      context: ${CONTEXT_LOCATION:-.}
+      dockerfile: docker/Dockerfile
+      target: frankenphp
+      args:
+        APP_ENV: ${APP_ENV:-production}
+        SPARK_USERNAME: ${SPARK_USERNAME}
+        SPARK_API_TOKEN: ${SPARK_API_TOKEN}
+    <<: *laravel-volumes
+    #
+    labels:
+        - traefik.enable=true
+        - traefik.http.routers.cosplaygif-app_${APP_ENV}-https.rule=Host(`${APP_DOMAIN}`)
+        - traefik.http.routers.cosplaygif-app_${APP_ENV}-https.tls=true
+        - traefik.http.services.cosplaygif-app_${APP_ENV}-https.loadbalancer.server.port=80
+        - traefik.http.routers.cosplaygif-app_${APP_ENV}-https.tls.certresolver=cloudflare
+        - traefik.http.routers.cosplaygif-app_${APP_ENV}-https.entrypoints=websecure
+        #- "traefik.http.routers.cosplaygif-app_${APP_ENV}.middlewares=forward-auth"
+        #- "traefik.http.middlewares.forward-auth.headers.customrequestheaders.X-Forwarded-Proto=https"
+        #- "traefik.http.middlewares.forward-auth.headers.customrequestheaders.X-Forwarded-Host=${APP_URL}"
+    environment:
+      SERVER_NAME: ${APP_DOMAIN:-:80}
+      SERVER_ROOT: /app/public
     depends_on:
-      mariadb:
-        condition: service_started
-      redis:
-        condition: service_started
-      memcached:
-        condition: service_started
-      #postgres:
-      #  condition: service_started
-
-  queue-worker:
-    #image: ghcr.io/marciifee/cosplaygif-app:main
-    build:
-      context: ./cosplaygif-app
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    command: php artisan queue:work
-    env_file:
-      - stack.env
-    volumes:
-      - app_storage:/var/www/storage
-    networks:
-      - laravel-development
-    depends_on:
-      - mariadb
       - redis
-      - memcached
+      - db
+    networks:
+      - internal
+      - traefik # uncomment in production
+    restart: unless-stopped
+    command: ["php", "artisan", "octane:frankenphp", "--host=0.0.0.0", "--port=80", "--workers=8", "--log-level=info"]
+    healthcheck:
+      test: [
+        "CMD-SHELL",
+        "curl -fsS http://127.0.0.1:80/up || { rc=$$?; echo \"[healthcheck] GET /up failed with code $$rc\" >&2; exit 1; }"
+      ]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+
+  worker:
+    container_name: cosplaygif-app_worker_${APP_ENV}
+    image: cosplaygif-app:worker
+    pull_policy: never
+    build:
+        context: ${CONTEXT_LOCATION:-.}
+        dockerfile: docker/Dockerfile
+        target: worker
+        args:
+          APP_ENV: ${APP_ENV:-production}
+          SPARK_USERNAME: ${SPARK_USERNAME}
+          SPARK_API_TOKEN: ${SPARK_API_TOKEN}
+    <<: *common
+    command: ["php", "artisan", "horizon"]
+#     command: ["php", "artisan", "queue:work"]
+    depends_on:
+      - redis
+      - db
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan inspire >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 2s
+      retries: 10
 
   scheduler:
-    #image: ghcr.io/marciifee/cosplaygif-app:main
-    build:
-      context: ./cosplaygif-app
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    command: php artisan schedule:work
-    env_file:
-      - stack.env
-    volumes:
-      - app_storage:/var/www/storage
+    container_name: cosplaygif-app__scheduler_${APP_ENV}
+    image: cosplaygif-app:worker
+    <<: *laravel-volumes
+    command: ["php", "artisan", "schedule:work"]
     depends_on:
-      - mariadb
       - redis
-      - memcached
+      - db
     networks:
-      - laravel-development
-
-  #postgres:
-  #  image: postgres:18
-  #  ports:
-  #    - "${POSTGRES_PORT:-5432}:5432"
-  #  environment:
-  #    - POSTGRES_DB=app
-  #    - POSTGRES_USER=laravel
-  #    - POSTGRES_PASSWORD=secret
-  #  volumes:
-  #    - postgres-data-development:/var/lib/postgresql
-  #  networks:
-  #    - laravel-development
-
-  mariadb:
-    image: mariadb:12
+      - internal
     restart: unless-stopped
-    ports:
-      - "${DB_PORT_FORWARD:-3336}:3306"
-    #configs:
-    #  - source: mariadb_init
-    #    target: /docker-entrypoint-initdb.d/init.sql
-    environment:
-      MARIADB_DATABASE: ${DB_DATABASE:-app}
-      MARIADB_USER: ${DB_USERNAME:-laravel}
-      MARIADB_PASSWORD: ${DB_PASSWORD:-Winforme25}
-      MARIADB_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-rootsecret}
-    volumes:
-      - mariadb-data:/var/lib/mysql
-    networks:
-      - laravel-development
     healthcheck:
-      test: ["CMD", "mariadb-admin", "ping", "-h", "127.0.0.1", "-u", "root", "-p${DB_ROOT_PASSWORD:-rootsecret}"]
-      interval: 5s
-      timeout: 3s
-      retries: 20
+      test: ["CMD-SHELL", "php artisan inspire >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 2s
+      retries: 10
+
+  pulse_check:
+    container_name: cosplaygif-app_pulse_check_${APP_ENV}
+    image: cosplaygif-app:worker
+    <<: *laravel-volumes
+    command: ["php", "artisan", "pulse:check"]
+    depends_on:
+      - redis
+      - db
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan inspire >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 2s
+      retries: 10
+
+  pulse_work:
+    container_name: cosplaygif-app_pulse_work_${APP_ENV}
+    image: cosplaygif-app:worker
+    <<: *laravel-volumes
+    command: ["php", "artisan", "pulse:work"]
+    depends_on:
+      - redis
+      - db
+    networks:
+      - internal
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "php artisan inspire >/dev/null 2>&1 || exit 1"]
+      interval: 15s
+      timeout: 2s
+      retries: 10
+
+  db:
+    image: mariadb:12
+    container_name: cosplaygif-app_db_${APP_ENV}
+    <<: *default-env
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-laravel}
+      MYSQL_USER: ${DB_USERNAME:-laravel}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+    ports:
+      - "${DB_EXPOSE_PORT:-13306}:3306" # change or remove in production
+    volumes:
+      - ./.mysql-db/:/var/lib/mysql
+    networks:
+      - internal
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+      start_period: 30s
 
   redis:
-    image: redis:latest
+    image: redis:alpine
+    container_name: cosplaygif-app_redis_${APP_ENV}
     restart: unless-stopped
+    volumes:
+      - .redis/redis:/data
     networks:
-      - laravel-development
+      - internal
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -134,13 +190,24 @@ services:
       timeout: 3s
       retries: 10
 
-networks:
-  laravel-development:
+# Optional: database backups using tiredofit/db-backup
+  # db_backup:
+  #   image: tiredofit/db-backup
+  #   container_name: db_backup_cosplaygif-app
+  #   depends_on:
+  #     - db
+  #   volumes:
+  #     - ./backups/:/backup
+  #   <<: *default-env
+  #   networks:
+  #     - internal
+  #   restart: always
 
-volumes:
-  #postgres-data-development:
-  mariadb-data:
-  app_storage:
+networks:
+  internal:
+  traefik:
+     external: true
+     name: traefik
 
 configs:
   mariadb_init:
