@@ -1,42 +1,39 @@
 FROM php:8.3-fpm-alpine
 
-# System deps
-RUN apk add --no-cache \
-    bash \
-    git \
-    unzip \
-    icu-dev \
-    oniguruma-dev \
+# Update package list and install dependencies
+RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpng-dev \
+    libjpeg-dev \
+    libwebp-dev \
+    libxpm-dev \
+    libfreetype6-dev \
     libzip-dev \
-    zlib-dev
+    zip \
+    unzip \
+    git \
+    bash \
+    fcgiwrap \
+    libmcrypt-dev \
+    libonig-dev \
+    libpq-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# PHP extensions
-RUN docker-php-ext-install \
-    pdo \
-    pdo_mysql \
-    intl \
-    mbstring \
-    zip
+# Install PHP extensions
+RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
+    && docker-php-ext-install gd \
+    && docker-php-ext-install pdo pdo_mysql intl mbstring zip exif pcntl bcmath opcache
 
-WORKDIR /var/www
+# Install Composer
+COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
 
-# Composer
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+# Copy existing application directory contents
+COPY . /var/www/html/
 
-# Copy app
-COPY . .
+# Set ownership and permissions for the /var/www/html directory to www-data
+RUN chown -R www-data:www-data /var/www/html/
 
-# IMPORTANT: no scripts during build
-RUN composer install \
-    --no-dev \
-    --prefer-dist \
-    --no-interaction \
-    --optimize-autoloader \
-    --no-scripts
-
-# Permissions
-RUN mkdir -p storage bootstrap/cache \
- && chown -R www-data:www-data storage bootstrap/cache
+USER www-data
 
 EXPOSE 9000
 CMD ["php-fpm"]
