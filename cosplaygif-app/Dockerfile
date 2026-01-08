@@ -43,10 +43,10 @@ RUN docker-php-ext-configure gd \
 # ------------------------------------------------------------
 # Composer
 # ------------------------------------------------------------
-COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+#COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
 # Install Composer
-#COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
+COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
 
 # ------------------------------------------------------------
 # Application
