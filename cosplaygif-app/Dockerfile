@@ -37,10 +37,19 @@ RUN docker-php-ext-configure gd \
         opcache
 
 # Install Composer
-COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
+#COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
+# Install Composer
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Application
 WORKDIR /var/www/html
+
+# COPY composer files first
+COPY composer.json composer.lock ./
+
+# INSTALL PHP dependencies (THIS WAS MISSING)
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader
+
+# NOW copy the rest of the application
 COPY . .
 
 # Permissions
