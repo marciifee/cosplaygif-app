@@ -30,5 +30,5 @@ jobs:
           context: .
           push: true
           tags: |
-            ghcr.io/marciifee/cosplaygif-app:main
+            ghcr.io/marciifee/cosplaygif-app:latest
             ghcr.io/marciifee/cosplaygif-app:${{ github.sha }}
