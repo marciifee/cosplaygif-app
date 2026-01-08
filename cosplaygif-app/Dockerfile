@@ -61,7 +61,8 @@ RUN composer install \
     --prefer-dist \
     --optimize-autoloader \
     --no-dev \
-    --no-scripts
+    --no-scripts \
+    -vvv
 
 COPY . .
 
