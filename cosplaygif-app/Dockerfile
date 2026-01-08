@@ -17,6 +17,7 @@ RUN apt-get update && apt-get install -y \
     libonig-dev \
     libpq-dev \
     libxml2-dev \
+    libcurl4-openssl-dev \
     libsodium-dev \
     && rm -rf /var/lib/apt/lists/*
 
@@ -37,11 +38,7 @@ RUN docker-php-ext-configure gd \
         exif \
         pcntl \
         bcmath \
-        opcache \
-        ctype \
-        tokenizer \
-        curl \
-        sodium
+        opcache
 
 # ------------------------------------------------------------
 # Composer
