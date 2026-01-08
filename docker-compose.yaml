@@ -21,7 +21,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     env_file:
-      - .env
+      - stack.env
     volumes:
       - app_storage:/var/www/storage
     networks:
@@ -44,7 +44,7 @@ services:
     restart: unless-stopped
     command: php artisan queue:work
     env_file:
-      - .env
+      - stack.env
     volumes:
       - app_storage:/var/www/storage
     networks:
@@ -62,7 +62,7 @@ services:
     restart: unless-stopped
     command: php artisan schedule:work
     env_file:
-      - .env
+      - stack.env
     volumes:
       - app_storage:/var/www/storage
     depends_on:
