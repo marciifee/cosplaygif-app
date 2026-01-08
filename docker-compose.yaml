@@ -2,8 +2,11 @@ services:
   nginx:
     image: nginx:latest
     restart: unless-stopped
-    volumes:
-      - /home/test/docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    #volumes:
+    #  - /home/test/docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    configs:
+      - source: nginx_default
+        target: /etc/nginx/conf.d/default.conf
     ports:
       - "8099:80"
     environment:
@@ -13,6 +16,10 @@ services:
     depends_on:
       app:
         condition: service_started # Wait for php-fpm to start
+
+configs:
+  nginx_default:
+    file: ./nginx.conf
 
   app:
     #image: ghcr.io/marciifee/cosplaygif-app:main
