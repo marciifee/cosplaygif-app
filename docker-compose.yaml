@@ -36,7 +36,7 @@ services:
       #postgres:
       #  condition: service_started
 
-  queue:
+  queue-worker:
     #image: ghcr.io/marciifee/cosplaygif-app:main
     build:
       context: ./cosplaygif-app
