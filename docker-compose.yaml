@@ -143,8 +143,8 @@ volumes:
   app_storage:
 
 configs:
-  #mariadb_init:
-  #  file: ./docker/mariadb/init.sql
+  mariadb_init:
+    file: ./docker/mariadb/init.sql
 
   nginx_default:
-    file: /home/test/docker/nginx/nginx.conf
+    file: ./nginx.conf
